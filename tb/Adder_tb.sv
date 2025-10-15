@@ -74,7 +74,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 1: 3.0 + 4.0 = 7.0
 	#100;
@@ -87,7 +87,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 2: 0.5 + 0.5 = 1.0
 	#100;
@@ -100,7 +100,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 3: 10.0 + 5.0 = 15.0
 	#100;
@@ -113,7 +113,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 4: 0.25 + 0.75 = 1.0
 	#100;
@@ -126,7 +126,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 5: 100.0 + 28.0 = 128.0
 	#100;
@@ -139,7 +139,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 6: -2.0 + -3.0 = -5.0
 	#100;
@@ -152,7 +152,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 7: -1.5 + 2.5 = 1.0 (mixed signs)
 	#100;
@@ -165,7 +165,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 8: -10.0 + -6.0 = -16.0
 	#100;
@@ -178,7 +178,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 9: 0.125 + 0.375 = 0.5
 	#100;
@@ -191,7 +191,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Example 10: 0 + 25.0 = 25.0
 	#100;
@@ -204,7 +204,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Overflow case 1: Large + Large → result > max normal exponent
 	#100;
@@ -217,7 +217,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Overflow case 2: Large + smaller large → still exceeds max exponent
 	#100;
@@ -230,7 +230,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Underflow case 1: Small number + much smaller number → smaller lost
 	#100;
@@ -243,7 +243,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Underflow case 2: Negative large + tiny negative → tiny lost
 	#100;
@@ -256,7 +256,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Underflow case 3: Very small numbers, same order → normalization detects sum
 	#100;
@@ -269,7 +269,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Underflow case 4: Small number + smaller but opposite sign → subtraction
 	#100;
@@ -282,7 +282,7 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
 
 	// Underflow case 5: Negative small + tiny negative → smaller lost
 	#100;
@@ -295,7 +295,20 @@ module Adder_tb;
 	wait (Ready == 1);
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
-	end
+	end else begin Correct = 0; end
+	
+	// +X and -X
+	#100;
+	A            = 32'h40B80000;  
+	B            = 32'hC0B80000;  
+	Expected_Sum = 32'h00000000;   
+	En           = 1;
+	#20 En       = 0;
+	
+	wait (Ready == 1);
+	if (Expected_Sum == Sum) begin
+		Correct		 = 1;
+	end else begin Correct = 0; end
 
 
 

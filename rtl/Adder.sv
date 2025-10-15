@@ -57,12 +57,13 @@ module Adder(
 	logic 																						G;
 	logic 																						R; 
 	logic 																						S;
-	logic [4:0]																			  exp_diff;
+	logic [7:0]																			  exp_diff;
 	
 	// Signals for Mantissa_Normalizer
 	logic [23:0]																			mantissa_out;
   logic [4:0] 																			shift_count;
-  logic 			 																			valid;
+  logic 			 																			normalizer_valid;
+  logic 			 																			normalizer_en;
 	
 	//FSM 
 	typedef enum logic[4:0]{
@@ -86,10 +87,11 @@ module Adder(
 	Mantissa_Normalizer normalizer (
 			.clk					(clk)
 		,	.reset				(reset)	
+		, .en  					(normalizer_en)
 		,	.mantissa_in	(M_Sum_temp[27:4])
 		,	.mantissa_out (mantissa_out)
 		,	.shift_count	(shift_count)
-		,	.valid				(valid)
+		,	.valid				(normalizer_valid)
 		);
 	
 	
@@ -99,7 +101,6 @@ module Adder(
 	always_ff @(posedge clk or posedge reset) begin
 		if (reset) begin
 			next_state																		<= Idle;
-			Sum_reg																				<= 1'b0;
 			S_Sum																					<= 1'b0;
 			E_Sum																					<= 8'b0;
 			M_Sum																					<= 24'b0; 			
@@ -109,7 +110,8 @@ module Adder(
 			G																							<= 1'b0;
 			R																							<= 1'b0; 
 			S																							<= 1'b0;
-			exp_diff																			<= 5'b0;
+			exp_diff																			<= 8'b0;
+			normalizer_en																	<= 0;
 			
 		
 		end
@@ -141,29 +143,33 @@ module Adder(
 					Sum_reg																		<= A;	
 					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
+					// CHECK IF DIRECTLY GOING TO IDLE WIHTOUT GOING THROUGH OTHER STAGES WILL AFFECT PIPELINE FEEDING
 				end
 				
 				// Map the larger exponent to A to simplify algorithm 
 				// Here built in > operator is used as vivado will optimize its synthesis as opposed to a custom method (speed, resource util)
 				else 
 					if (E_A < E_B || (E_A == E_B && M_A < M_B)) begin
+						exp_diff																<=(E_B - E_A);							// Calculate exponent difference
 						S_B																			<= S_A;
 						E_B																			<= E_A;
 						M_B																			<= M_A;
 						S_A																			<= S_B;
 						E_A																			<= E_B;
 						M_A																			<= M_B;
-						next_state															<= Exponent_Diff;
+						next_state															<= Mantissa_Shift;
 					end	
 					else begin
-						next_state															<= Exponent_Diff;				
+						next_state															<= Mantissa_Shift;				
+						exp_diff																<=(E_A - E_B);							// Calculate exponent difference
 					end
 			end
 			
-			Exponent_Diff : begin
-				exp_diff																		<=(E_A - E_B);							// Calculate exponent difference
-				next_state																	<= Mantissa_Shift;
-			end
+			// MERGED INTO COMPARE STATE
+			// Exponent_Diff : begin
+			// 	exp_diff																		<=(E_A - E_B);							// Calculate exponent difference
+			// 	next_state																	<= Mantissa_Shift;
+			// end
 			
 			Mantissa_Shift : begin
 				M_B										    									<= M_B >> exp_diff;					// Shift smaller mantissa right
@@ -182,25 +188,34 @@ module Adder(
 				
 				S_Sum																				<= S_A;											// Sign of Sum 
 				next_state																	<= Normalization;
-				
+				normalizer_en																<= 1;
 			end
 			
 			Normalization : begin
+				normalizer_en																<= 0;
 				if (M_Sum_temp[28] == 1) begin																					// Overflow detected
 					M_Sum_temp																<= M_Sum_temp >> 1;					// Right shit to correct
 					E_Sum																			<= E_Sum + 1;								// Update exponent
+					next_state																<= Rounding_Check;
 				end
-				else begin
+				else 	begin
 					M_Sum_temp																<= M_Sum_temp << shift_count;	// Left Shift
 					E_Sum																			<= E_Sum - shift_count;				// Update exponent
+					next_state																<= Rounding_Check;
 				end
 				
-				next_state																	<= Rounding_Check;
+				// Handle case where sum is zero
+				if(M_Sum_temp == 29'b0) begin
+					E_Sum																			<= 8'b0;
+					S_Sum																			<= 1'b0;
+					next_state																<= Rounding_Check;
+				end
+				
 				
 			end
 			
 			Rounding_Check : begin
-				M_Sum																				<= M_Sum_temp[27:4];				// First 23 bits (from MSB) are the Mantissa
+				M_Sum																				<= M_Sum_temp[27:4];				// First 23 bits (from MSB) are the Mantissa (Includes implied 1)
 				G																						<= M_Sum_temp[3];						// G
 				R																						<= M_Sum_temp[2];						// R
 				S																						<= M_Sum_temp[1] || M_Sum_temp[0];					// S
@@ -219,7 +234,7 @@ module Adder(
 			
 			Done : begin
 				Ready_reg																		<= 1'b1;
-				Sum_reg																			<= {S_Sum, E_Sum, M_Sum[22:0]}; 
+				Sum_reg																			<= {S_Sum, E_Sum, M_Sum[22:0]}; // Take 22 bits from Mantissa. MSB is implied 1.
 				next_state																	<= Idle;
 			end
 			
