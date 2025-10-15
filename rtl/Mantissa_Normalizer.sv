@@ -8,12 +8,9 @@ module Mantissa_Normalizer (
     output logic        valid            // output valid flag
 );
 
-    // internal combinational signals
     logic [4:0]  shift_count_comb;
     logic        valid_comb;
-    logic [23:0] mantissa_shifted;
 
-    // Detect leading zeros (combinational)
     always_comb begin
         valid_comb = 1'b1;
 
@@ -50,23 +47,9 @@ module Mantissa_Normalizer (
             valid_comb = 0;
         end
     end
-
-    // Shift left based on detected count
-    assign mantissa_shifted 												= mantissa_in << shift_count_comb;
-
-    // Register outputs
-    always_ff @(posedge clk or posedge reset) begin
-        if (reset) begin
-            mantissa_out 														<= 24'b0;
-            shift_count  														<= 5'd0;
-            valid        														<= 1'b0;
-        end else if (en) begin
-            mantissa_out 														<= mantissa_shifted;
-            shift_count  														<= shift_count_comb;
-            valid        														<= valid_comb;
-        end else begin
-            valid 																	<= 1'b0;
-        end
-    end
+		
+		assign mantissa_out 														= mantissa_in << shift_count_comb;
+		assign shift_count 															= shift_count_comb;
+		assign valid 																		= valid_comb;
 
 endmodule
