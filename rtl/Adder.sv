@@ -134,12 +134,12 @@ module Adder(
 			end
 			Compare : begin
 				// If A or B are zero, return the other
-				if (A == 32'b0) begin
+				if (A[30:0] == 31'b0) begin
 					Sum_reg																		<= B;
 					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
 				end
-				else if (B == 32'b0) begin
+				else if (B[30:0] == 31'b0) begin
 					Sum_reg																		<= A;	
 					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;

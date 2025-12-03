@@ -309,6 +309,37 @@ module Adder_tb;
 	if (Expected_Sum == Sum) begin
 		Correct		 = 1;
 	end else begin Correct = 0; end
+	
+	// Example: subtraction that produces small result
+	#100;
+	A = 32'h3F800000;   // +1.0
+	B = 32'hBF7FFFFF;   // -0.99999994 (slightly less than 1 in magnitude)
+	Expected_Sum = 32'h34000000;   // ~0.00000006 * 2^1 normalized (mantissa will require many left shifts)
+	En           = 1;
+	#20 En       = 0;
+
+	wait (Ready == 1);
+	if (Expected_Sum == Sum) begin
+		Correct = 1;
+	end else begin
+		Correct = 0;
+	end
+	
+	// Example: 0 operand
+	#100;
+	A = 32'h80000000;  
+	B = 32'hBF7FFFFF;   
+	Expected_Sum = 32'hBF7FFFFF;   
+	En           = 1;
+	#20 En       = 0;
+
+	wait (Ready == 1);
+	if (Expected_Sum == Sum) begin
+		Correct = 1;
+	end else begin
+		Correct = 0;
+	end
+
 
 
 
