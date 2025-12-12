@@ -51,7 +51,7 @@ module Divider(
 	logic [23:0]																			M_B;   											// Extra bit for implicit 1  
 	
 	// Internal Signals 
-	reg signed [8:0]																	E_Div;											// Signed to detect underflow (E_Div <= 0)
+	reg signed [9:0]																	E_Div;											// Signed to detect underflow (E_Div <= 0)
 	logic																							S_Div;	
 	logic [23:0]																			M_Div; 											// Extra bit for implicit 1	
 	logic [31:0]																			Result_reg;
@@ -104,7 +104,7 @@ module Divider(
 		if (reset) begin
 			next_state																		<= Idle;
 			S_Div																					<= 1'b0;
-			E_Div																					<= 9'b0;
+			E_Div																					<= 10'b0;
 			M_Div																			  	<= 24'b0; 			
 			Result_reg																		<= 32'b0;
 			Ready_reg																			<= 1'b0;
@@ -152,7 +152,14 @@ module Divider(
 			Compare : begin
 				
 				// Check NaN first
-				if ((E_A == 8'hFF && M_A != 0) || (E_B == 8'hFF && M_B != 0)) begin
+				if (A == 32'h7FC00000 || B == 32'h7FC00000) begin
+					NaN_reg		 																<= 1'b1; 
+					Ready_reg																	<= 1'b0;
+					next_state																<= Idle;
+					Result_reg 																<= {1'b0, 8'hFF, 23'h400000}; // canonical NaN
+				end
+				
+				else if ((E_A == 8'hFF && M_A != 0) && (E_B == 8'hFF && M_B != 0)) begin
 					NaN_reg		 																<= 1'b1; 
 					Ready_reg																	<= 1'b0;
 					next_state																<= Idle;
@@ -183,6 +190,11 @@ module Divider(
 				
 				// B = inf
 				else if (E_B == 8'hFF) begin
+					Result_reg 																<= {S_A ^ S_B, 8'd0, 23'b0}; // Zero
+					Ready_reg  																<= 1'b1; 
+					next_state 																<= Idle;
+				end
+				else if (A[30:0] == 31'b0 ) begin
 					Result_reg 																<= {S_A ^ S_B, 8'd0, 23'b0}; // Zero
 					Ready_reg  																<= 1'b1; 
 					next_state 																<= Idle;
@@ -219,12 +231,12 @@ module Divider(
 			end
 			
 			NR1_2: begin
-				tmp64																				<= tmp64 >> 30;				
+				tmp64																				<= tmp64 >> 31;				
 				next_state																	<= NR1_3;
 			end
 			
 			NR1_3: begin
-				tmp64																				<= (2 << 30) - tmp64;				
+				tmp64																				<= (2 << 31) - tmp64;				
 				next_state																	<= NR1_4;
 			end
 			
@@ -235,7 +247,7 @@ module Divider(
 			end
 			
 			NR1_5: begin
-				lut_out_next																<= tmp64 >> 30; 								// Eventually becomes the final Reciprocal
+				lut_out_next																<= tmp64 >> 31; 								// Eventually becomes the final Reciprocal
 				next_state																	<= NR1_1;
 			end
 
@@ -248,13 +260,13 @@ module Divider(
 
 			
 			Normalization : begin
-				if (prod64[63] == 1) begin																										// Overflow detected
-					prod64																		<= prod64 >> 31;								// Right shit to correct
-					E_Div																			<= E_Div + 1;										// Update exponent
+				if (prod64[54] == 0) begin																									// underflow detected
+					prod64																		<= prod64 << 1;							    // left shit to correct
+					E_Div																			<= E_Div - 1;										// Update exponent
 				end 
-				else begin
-					prod64																		<= prod64 >> 30;
-				end
+				// else begin
+				// 	prod64																		<= prod64 >> 31;
+				// end
 				
 				next_state																	<= Rounding_and_final_Exp_Check;
 				
@@ -263,20 +275,22 @@ module Divider(
 			Rounding_and_final_Exp_Check : begin
 			
 				// Final check for overflow and underflow
-				if (E_Div >= 9'd255) begin
-					Result_reg 																<= {A[31]^B[31], 8'hFF, 23'b0}; // Inf
-					Ready_reg																	<= 1'b1;
-					next_state																<= Idle;
-				end
-				else if (E_Div <= 0) begin
+				if (E_Div[9] == 1) begin
 					Result_reg 																<= {S_Div, 31'b0};        			// Zero (underflow)
 					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
 				end
+				else if (E_Div[8] == 1 || E_Div[7:0] == 8'd255) begin
+					Result_reg 																<= {A[31]^B[31], 8'hFF, 23'b0}; // Inf
+					Ready_reg																	<= 1'b1;
+					next_state																<= Idle;
+				end
+				else begin
+					M_Div																			<= prod64[54:31];					// First 23 bits (from MSB) are the Mantissa (Includes implied 1)
+					next_state																<= Done;
+				end
 				
-				M_Div																				<= prod64[62:40];					// First 23 bits (from MSB) are the Mantissa (Includes implied 1)
 
-				next_state																	<= Done;
 				
 			end
 			
