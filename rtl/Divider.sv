@@ -145,6 +145,7 @@ module Divider(
 					E_B																				<= B[30:23];
 					M_A																				<= {1'b1, A[22:0]}; 	 
 					M_B																				<= {1'b1, B[22:0]}; 
+					lut_idx																		<= B[22:13]; 										// Initial guess will be available in lut_out
 					
 				end
 				
@@ -207,7 +208,6 @@ module Divider(
 			end
 			
 			Init : begin
-				lut_idx																			<= M_B[22:13]; 										// Initial guess will be available in lut_out
 				E_Div																				<= E_A - E_B + 127;
 				Dq																					<= {M_B, 8'b0};   							// M_B is 24 bits
 				next_state																	<= NR1_1;
