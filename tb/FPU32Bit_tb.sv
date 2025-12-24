@@ -107,6 +107,8 @@ module FPU23Bit_tb();
 
         // 1. ADDITION: 3.5 + 2.0 = 5.5
         run_test(8'h00, 32'h40600000, 32'h40000000, 32'h40B00000, "ADD_BASIC");
+				
+				run_test(8'h00, 32'h3F800000, 32'h3F800000, 32'h40000000, "ADD_BASIC");
 
         // 2. SUBTRACTION: 5.5 - 2.0 = 3.5 (OpSel 11)
         run_test(8'h03, 32'h40B00000, 32'h40000000, 32'h40600000, "SUB_BASIC");
