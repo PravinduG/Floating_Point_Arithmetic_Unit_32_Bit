@@ -79,11 +79,17 @@ module Divider(
 		,	Compare
 		,	Init
 		,	NR1_1
+		, NR_Wait_1
+		, NR_Wait_2
 		,	NR1_2
 		,	NR1_3
 		,	NR1_4
+		, NR_Wait_3
+		, NR_Wait_4
 		,	NR1_5
 		, Multiply
+		, Multiply_Wait_1
+		, Multiply_Wait_2
 		,	Normalization
 		, Rounding_and_final_Exp_Check
 		, Rounding_Apply
@@ -99,6 +105,17 @@ module Divider(
 	assign Result																			= Result_reg;
 	assign Ready																			= Ready_reg;
 	assign NaN																				= NaN_reg;
+	
+	// For multiplications
+	logic [31:0] mult_a, mult_b;
+	logic [63:0] mult_res;
+
+	// Force DSP
+	(* use_dsp = "yes" *) 
+	always_ff @(posedge clk) begin
+			// No reset here for maximum performance
+			mult_res 																			<= mult_a * mult_b;
+	end
 	
 	always_ff @(posedge clk or posedge reset) begin
 		if (reset) begin
@@ -216,18 +233,32 @@ module Divider(
 			NR1_1: begin
 				if (iter < iter_count) begin
 					iter 																			<= iter + 1;
-					next_state																<= NR1_2;
+					next_state																<= NR_Wait_1;
 					if (iter == 0) begin
 						lut_out_next														<= lut_out; 										 // Initial update of lut_out_next
-						tmp64																		<= Dq * lut_out;		 						 // Initially mult by lut_out
+						mult_a																	<= Dq;
+						mult_b																	<= lut_out;
+						//tmp64																		<= Dq * lut_out;		 						 // Initially mult by lut_out
 					end
 					else begin
-						tmp64																		<= Dq * lut_out_next;						 // Now lut_out_next is updated
+						// tmp64																		<= Dq * lut_out_next;						 // Now lut_out_next is updated
+						mult_b																	<= lut_out_next;
 					end
 				end 
 				else if (iter == iter_count) begin
 					next_state																<= Multiply;
 				end
+			end
+			
+			NR_Wait_1 : begin
+				// Wait
+				next_state																	<= NR_Wait_2;
+			end	
+			
+			NR_Wait_2 : begin
+				// Result available
+				tmp64																				<= mult_res;
+				next_state																	<= NR1_2;
 			end
 			
 			NR1_2: begin
@@ -241,8 +272,20 @@ module Divider(
 			end
 			
 			NR1_4: begin
-				tmp64																				<= lut_out_next * tmp64;
+				//tmp64																				<= lut_out_next * tmp64;
+				mult_a																			<= lut_out_next;
+				mult_b																			<= tmp64;
 				
+				next_state																	<= NR_Wait_3;
+			end
+			
+			NR_Wait_3: begin	
+			  // Wait
+				next_state																	<= NR_Wait_4;
+			end
+			
+			NR_Wait_4: begin
+				tmp64																				<= mult_res;
 				next_state																	<= NR1_5;
 			end
 			
@@ -253,8 +296,20 @@ module Divider(
 
 			
 			Multiply: begin
-				prod64																			<= M_A * lut_out_next;				  // Multiply by reciprocal => Division
+				mult_a																			<= M_A;
+				mult_b																			<= lut_out_next;
+				//prod64																			<= M_A * lut_out_next;				  // Multiply by reciprocal => Division
 				S_Div																				<= S_A ^ S_B;										// Sign of Result 
+				next_state																	<= Multiply_Wait_1;
+			end
+			
+			Multiply_Wait_1: begin
+				// Wait
+				next_state																  <= Multiply_Wait_2;
+			end
+			
+			Multiply_Wait_2: begin
+				prod64																			<= mult_res;
 				next_state																	<= Normalization;
 			end
 
