@@ -218,6 +218,28 @@ module Multiplier_tb;
 	if (Expected_Sum == Result) begin
 			Correct = 1;
 	end else begin Correct = 0; end
+	
+		#100;
+	A            = 32'h41100000;   // 9
+	B            = 32'h40000000;   // 2
+	Expected_Sum = 32'h41900000;   // 18
+	En           = 1;
+	#20 En       = 0;
+	
+	#100;
+	A            = 32'h47C35000;   // 100,000.0
+	B            = 32'h41100000;   // 9.0
+	Expected_Sum = 32'h495BBA00;   // 900,000.0
+	En           = 1;
+	#20 En       = 0;
+	
+	wait (Ready == 1);
+	if (Expected_Sum == Result) begin
+			Correct = 1;
+	end else begin 
+			Correct = 0; 
+	end
+
 
 
 	

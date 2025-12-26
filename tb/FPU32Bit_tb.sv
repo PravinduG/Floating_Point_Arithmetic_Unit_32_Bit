@@ -130,6 +130,14 @@ module FPU23Bit_tb();
 
         // 7. MULT BY ZERO: 5.5 * 0.0 = 0.0
         run_test(8'h01, 32'h40B00000, 32'h00000000, 32'h00000000, "MULT_BY_ZERO");
+				
+				run_test(8'h02, 32'h41100000, 32'h41200000, 32'h3F666666, "DIV_9_BY_10");
+				
+				run_test(8'h01, 32'h41100000, 32'h40000000, 32'h40900000, "DIV_9_BY_2");
+				
+				run_test(8'h01, 32'h47C35000, 32'h41100000, 32'h495BBA00, "MULT_100k_BY_9");
+				
+				run_test(8'h06, 32'h51A954D5, 32'h41100000, 32'h5016844C, "DIV_LARGE_LONG_NUM");
 
         $display("[%0t] --- All Tests Finished ---", $time);
         #100000; $finish;
