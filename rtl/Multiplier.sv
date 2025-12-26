@@ -66,6 +66,8 @@ module Multiplier(
 			Idle
 		,	Compare
 		,	Operation
+		, Operation_Wait_1
+		, Operation_Wait_2
 		,	Normalization
 		, Rounding_and_final_Exp_Check
 		, Rounding_Apply
@@ -82,6 +84,17 @@ module Multiplier(
 	assign Ready																			= Ready_reg;
 	assign NaN																				= NaN_reg;
 	
+	// For multiplications
+	logic [23:0] mult_a, mult_b;
+	logic [47:0] mult_res;
+
+	// Force DSP
+	(* use_dsp = "yes" *) 
+	always_ff @(posedge clk) begin
+			// No reset here for maximum performance
+			mult_res 																			<= mult_a * mult_b;
+	end
+	
 	always_ff @(posedge clk or posedge reset) begin
 		if (reset) begin
 			next_state																		<= Idle;
@@ -95,6 +108,8 @@ module Multiplier(
 			G																							<= 1'b0;
 			R																							<= 1'b0; 
 			S																							<= 1'b0;
+			mult_a																				<= 24'b0;
+			mult_b																				<= 24'b0;
 			
 		
 		end
@@ -112,7 +127,10 @@ module Multiplier(
 					E_A																				<= A[30:23];
 					E_B																				<= B[30:23];
 					M_A																				<= {1'b1, A[22:0]}; 	 
+					mult_a																		<= {1'b1, A[22:0]}; 	 
 					M_B																				<= {1'b1, B[22:0]}; 
+					mult_b																	  <= {1'b1, B[22:0]}; 
+
 				end
 				
 			end
@@ -121,7 +139,7 @@ module Multiplier(
 				// Check NaN first
 				if ((E_A == 8'hFF && M_A != 0) || (E_B == 8'hFF && M_B != 0)) begin
 					NaN_reg		 																<= 1'b1; 
-					Ready_reg																	<= 1'b0;
+					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
 					Result_reg 																<= {1'b0, 8'hFF, 23'h400000}; // canonical NaN
 				end
@@ -130,7 +148,7 @@ module Multiplier(
 				else if (((E_A == 8'hFF && M_A == 0) && (E_B == 0 && M_B == 0)) ||
 								 ((E_B == 8'hFF && M_B == 0) && (E_A == 0 && M_A == 0))) begin
 					NaN_reg		 																<= 1'b1;  
-					Ready_reg																	<= 1'b0;
+					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
 					Result_reg 																<= {1'b0, 8'hFF, 23'h400000}; // canonical NaN
 				end
@@ -158,9 +176,17 @@ module Multiplier(
 			
 			
 			Operation : begin
-				M_Mult_temp																	<= M_A * M_B;										// Uses DSP for faster, resource efficient mult
+				// mult_a																			<= M_A;
+				// mult_b																		  <= M_B;
+				//M_Mult_temp																	<= M_A * M_B;										// Uses DSP for faster, resource efficient mult
 				E_Mult																			<= E_A + E_B - 127;
 				S_Mult																			<= S_A ^ S_B;										// Sign of Result 
+				next_state																	<= Operation_Wait_1;
+			end
+			
+			Operation_Wait_1: begin
+				// Wait
+				M_Mult_temp																	<= mult_res;
 				next_state																	<= Normalization;
 			end
 			
