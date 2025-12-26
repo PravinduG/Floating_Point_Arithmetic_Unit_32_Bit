@@ -21,17 +21,11 @@
 
 
 module FPU23Bit(
-    input clk,
-    input reset,
-    // input [31:0] A,
-    // input [31:0] B,
-    // input En,
-    // input [1:0] OpSel,       // 00: Add, 01: Mult, 10: Div 11: Sub
-		input rx, 							 // Uart Signals 
-		output tx 							 // Uart Signals  
-    // output reg [31:0] Result,
-    //output reg Ready,
-    // output reg NaN
+    	input  clk
+    ,	input  reset
+		,	input  rx 							
+		,	output tx 						 
+
 );
 		
 		
@@ -73,7 +67,7 @@ module FPU23Bit(
 		
 		// Debug Signals
 		logic 																					debug;
-		
+
 		// Parsing states
 		typedef enum logic [4:0] {
 			IDLE 																					= 5'd0, 
@@ -103,53 +97,55 @@ module FPU23Bit(
 		UART #(
 				.BAUD_DIVISOR(BAUD_DIVISOR)
 			)uart_module(
-				.clk(clk),
-				.reset(reset),
-				.data_in(data_in),
-				.tx_en(tx_en),
-				.rx(rx),
-				.data_en(data_en),
-				.tx_busy(tx_busy),
-				.tx(tx),
-				.tx_error(tx_error),
-				.rx_busy(rx_busy),
-				.data_out(data_out)
+				.clk			(clk),
+				.reset		(reset),
+				.data_in	(data_in),
+				.tx_en		(tx_en),
+				.rx				(rx),
+				.data_en	(data_en),
+				.tx_busy	(tx_busy),
+				.tx				(tx),
+				.tx_error	(tx_error),
+				.rx_busy	(rx_busy),
+				.data_out	(data_out)
 			);
 
     //Instantiate the Adder
     Adder unit_add (
-        .clk(clk),
-        .reset(reset),
-        .A(A),
-        .B(B_adjusted),
-        .En(En && (OpSel == 2'b00 || OpSel == 2'b11)),
-        .Sum(sum_out),
-        .Ready(ready_add)
+        .clk				(clk),
+        .reset			(reset),
+        .A					(A),
+        .B					(B_adjusted),
+        .En					(En && (OpSel == 2'b00 || OpSel == 2'b11)),
+        .Sum				(sum_out),
+        .Ready			(ready_add)
     );
 
     //Instantiate the Multiplier
     Multiplier unit_mult (
-        .clk(clk),
-        .reset(reset),
-        .A(A),
-        .B(B),
-        .En(En && (OpSel == 2'b01)),
-        .Result(mult_out),
-        .Ready(ready_mult),
-        .NaN(nan_mult)
+        .clk				(clk),
+        .reset			(reset),
+        .A					(A),
+        .B					(B),
+        .En					(En && (OpSel == 2'b01)),
+        .Result			(mult_out),
+        .Ready			(ready_mult),
+        .NaN				(nan_mult)
     );
 
     //Instantiate the Divider
     Divider unit_div (
-        .clk(clk),
-        .reset(reset),
-        .A(A),
-        .B(B),
-        .En(En && (OpSel == 2'b10)),
-        .Result(div_out),
-        .Ready(ready_div),
-        .NaN(nan_div)
+        .clk			(clk),
+        .reset		(reset),
+        .A				(A),
+        .B				(B),
+        .En				(En && (OpSel == 2'b10)),
+        .Result		(div_out),
+        .Ready		(ready_div),
+        .NaN			(nan_div)
     );
+
+
 
 
 		// UART receiving and parsing
@@ -167,6 +163,7 @@ module FPU23Bit(
 				OpSel																				<=  2'b0;
 				En																					<=  1'b0;
 				tx_en																				<=  1'b0;
+
 				
 			end
 			else begin
@@ -184,7 +181,7 @@ module FPU23Bit(
 					En																				<=  1'b0;
 					tx_en																			<=  1'b0;
 					debug																			<=  1'b0;
-				
+
 					if (rx_busy) begin
 						state																		<= WAIT_FOR_UART;
 					end
@@ -387,5 +384,6 @@ module FPU23Bit(
             end
         endcase
     end
+		
 
 endmodule
