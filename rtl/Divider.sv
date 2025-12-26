@@ -136,6 +136,8 @@ module Divider(
 			tmp64 																				<= 64'b0;
 			prod64																				<= 64'b0;
 			iter																					<= 2'b0;
+			mult_a																				<= 32'b0;
+			mult_b																				<= 32'b0;
 		
 		end
 		else begin
@@ -153,6 +155,8 @@ module Divider(
 				tmp64 																			<= 64'b0;
 				prod64																			<= 64'b0;
 				iter																				<= 2'b0;
+				mult_a																			<= 32'b0;
+			  mult_b																			<= 32'b0;
 				
 				if (En) begin 
 					next_state																<= Compare;
@@ -172,14 +176,14 @@ module Divider(
 				// Check NaN first
 				if (A == 32'h7FC00000 || B == 32'h7FC00000) begin
 					NaN_reg		 																<= 1'b1; 
-					Ready_reg																	<= 1'b0;
+					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
 					Result_reg 																<= {1'b0, 8'hFF, 23'h400000}; // canonical NaN
 				end
 				
 				else if ((E_A == 8'hFF && M_A != 0) && (E_B == 8'hFF && M_B != 0)) begin
 					NaN_reg		 																<= 1'b1; 
-					Ready_reg																	<= 1'b0;
+					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
 					Result_reg 																<= {1'b0, 8'hFF, 23'h400000}; // canonical NaN
 				end
@@ -187,7 +191,7 @@ module Divider(
 				// Check 0/0
 				else if (A[30:0] == 31'b0 && B[30:0] == 31'b0) begin
 					NaN_reg		 																<= 1'b1;  
-					Ready_reg																	<= 1'b0;
+					Ready_reg																	<= 1'b1;
 					next_state																<= Idle;
 					Result_reg 																<= {1'b0, 8'hFF, 23'h400000}; // canonical NaN
 				end
@@ -242,6 +246,7 @@ module Divider(
 					end
 					else begin
 						// tmp64																		<= Dq * lut_out_next;						 // Now lut_out_next is updated
+						mult_a																	<= Dq;
 						mult_b																	<= lut_out_next;
 					end
 				end 
