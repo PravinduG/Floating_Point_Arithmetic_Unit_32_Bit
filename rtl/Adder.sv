@@ -172,6 +172,14 @@ module Adder(
 			// end
 			
 			Mantissa_Shift : begin
+				if (exp_diff >= 24) begin
+					S 																				<= |M_B; // Everything shifted out, if any bit was 1, S is 1
+				end else if (exp_diff > 0) begin
+					// Use a mask to isolate the bottom 'exp_diff' bits, then OR-reduce them
+					S 																				<= |(M_B & ~(24'hFFFFFF << exp_diff));
+				end else begin
+					S 																				<= 1'b0;
+				end
 				M_B										    									<= M_B >> exp_diff;					// Shift smaller mantissa right
 				E_Sum																				<= E_A; 										// Larger exponent is the target exponent
 				next_state																	<= Operation;
@@ -218,19 +226,31 @@ module Adder(
 				M_Sum																				<= M_Sum_temp[27:4];				// First 23 bits (from MSB) are the Mantissa (Includes implied 1)
 				G																						<= M_Sum_temp[3];						// G
 				R																						<= M_Sum_temp[2];						// R
-				S																						<= M_Sum_temp[1] || M_Sum_temp[0];					// S
-																											
-				next_state																	<= Done;
+				S																						<= S || M_Sum_temp[1] || M_Sum_temp[0];					// S
+				
+				// Round to Nearest, Ties to Even:
+				// Round up if (G and (R or S)) OR (G and R and LSB is 1)
+				if (G && (R || S || M_Sum_temp[4])) begin
+					next_state 																<= Rounding_Apply;
+				end else begin
+					next_state 																<= Done;
+				end
+																										
 				
 			end
 			
-			// Rounding_Apply : begin
-			// 	if (G == 1) begin
-			// 		if (R == 1 || S == 1) begin
-			// 			M_Sum_temp[27:5]
-			// 		end
-			// 	end
-			// end		
+			Rounding_Apply : begin
+				// Apply the increment
+				if (M_Sum == 24'hFFFFFF) begin
+					// If mantissa is all 1s, rounding causes it to overflow
+					M_Sum 																		<= 24'h800000; // Becomes 1.000...
+					E_Sum 																		<= E_Sum + 1;  // Exponent increases
+				end else begin
+					M_Sum 																		<= M_Sum + 1'b1;
+				end
+				
+				next_state <= Done;
+			end		
 			
 			Done : begin
 				Ready_reg																		<= 1'b1;
